@@ -8,8 +8,11 @@ import io.vertx.core.Future
 import io.vertx.core.eventbus.DeliveryOptions
 import io.vertx.core.eventbus.MessageConsumer
 import io.vertx.core.eventbus.Message
+import io.vertx.core.json.JsonArray
 import io.vertx.serviceproxy.ProxyHandler
 import io.vertx.serviceproxy.ProxyHelper
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.config.BeanDefinition
@@ -18,46 +21,34 @@ import org.springframework.stereotype.Component
 
 /**
  * Created by chenweijiang on 2017/7/11.
+ * worker consume the event bus.
+ * receive message from event bus and call the db and reply
  */
 @Component
 @Scope(BeanDefinition.SCOPE_PROTOTYPE)
 class CustomerWorker :AbstractVerticle() {
-
-//    @Autowired
-//    lateinit var objectMapper:ObjectMapper
-//    @Autowired
-//    lateinit var customerService:CustomerService
+    private val LOG:Logger = LoggerFactory.getLogger(CustomerWorker::class.java)
 
     @Autowired
-    lateinit var customerAsyncService:CustomerAsnycService
+    lateinit var customerService: CustomerService
 
-    override fun start(startFuture: Future<Void>?) {
-        super.start(startFuture)
-        ProxyHelper.registerService(CustomerAsnycService::class.java,vertx,customerAsyncService,
-                CustomerAsnycService.ADDRESS).completionHandler({completionHandler->
-            if(completionHandler.succeeded()){
-                startFuture!!.complete()
-            } else {
-                startFuture!!.fail(completionHandler.cause())
-            }
-        })
+    override fun start() {
+        val consumer: MessageConsumer<Any> = vertx.eventBus().consumer("com.learning.vertxcompare.customer")
+        consumer.handler(this::handleMesssage)
+        LOG.error("worker is start up sucess")
     }
 
-//    override fun start() {
-//        super.start()
-//
-////        val consumer:MessageConsumer<Any> = vertx.eventBus().consumer("com.learning.vertxcompare.customer")
-////        consumer.handler(this::handleDatabaseRequest)
-//    }
+    fun handleMesssage(msg:Message<Any>){
+        val method = msg.headers().get("method")
+        val deOpt:DeliveryOptions = DeliveryOptions()
+        if("find".equals(method)){
 
-//    fun handleDatabaseRequest(msg:Message<Any>){
-//        val method = msg.headers().get("method")
-//        val deOpt:DeliveryOptions = DeliveryOptions()
-//        if("find".equals(method)){
-//            var name:String = msg.headers().get("name")
-//            var result = customerService.findByName(name)
-//            val reply = objectMapper.writeValueAsString(result)
-//            msg.reply(reply,deOpt)
-//        }
-//    }
+            val name:String = msg.body() as String
+            val result = customerService.findByName(name)
+            val json:JsonArray = JsonArray(result)
+            msg.reply(json.encodePrettily(),deOpt)
+        }
+    }
+
+
 }

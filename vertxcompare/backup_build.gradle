@@ -64,6 +64,16 @@ repositories {
     mavenCentral()
 }
 
+sourceSets{
+    main{
+        java{
+            srcDirs += "${projectDir}/src/main/generated/java"
+        }
+    }
+//    generated{
+//        java.srcDir "${projectDir}/src/main/generated/java"
+//    }
+}
 
 dependencies {
     //kotlin
@@ -91,7 +101,42 @@ dependencies {
 
     testCompile group: 'junit', name: 'junit', version: '4.12'
 }
+//vertx code genetor settting
+task annotationProcessing(type: JavaCompile, group: 'build', description: 'Generates the Vertx proxies') {
+    source = "${projectDir}/src/main/java" // input source set
+    classpath = configurations.compile //+ configurations.vertx // add processor module to classpath
+    // specify javac arguments
+    destinationDir = project.file('src/main/generated/java')
+    options.compilerArgs = [
+            "-proc:only",
+            "-processor", "io.vertx.codegen.CodeGenProcessor", // vertx processor here
+//            "-Acodegen.generators=Kotlin",
+//            "-Acodegen.output=${projectDir}/src/main/kotlin"
+            "-AoutputDirectory=${projectDir}/src/main"
+    ]
+    // specify output of generated code
+//    destinationDir = file("${projectDir}/src/generated/java")
+}
 
+
+//compileJava{
+//    dependsOn(generateProxies)
+//    source    += sourceSets.generated.java
+//    // specify javac arguments
+//    options.compilerArgs = [
+//            "-Acodetrans.output=${projectDir}/src/main"
+//    ]
+//}
+
+compileJava {
+    targetCompatibility = 1.8
+    sourceCompatibility = 1.8
+
+    dependsOn(annotationProcessing)
+    options.compilerArgs = [
+            "-Acodetrans.output=${projectDir}/src/main"
+    ]
+}
 
 /* used to create the fat jar files. */
 shadowJar {

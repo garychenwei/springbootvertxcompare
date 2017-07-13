@@ -80,6 +80,8 @@ class Application{
                 println(ar.cause())
                 logger.error(ar.cause().toString())
                 failed.compareAndSet(false,true)
+            } else {
+                logger.debug("start up $apiVerticleName success")
             }
             deployLatch.countDown()
         })
@@ -90,6 +92,8 @@ class Application{
                 println(ar.cause())
                 logger.error(ar.cause().toString())
                 failed.compareAndSet(false,true)
+            }else {
+                logger.debug("start up $workerVerticleName success")
             }
             deployLatch.countDown()
         })
